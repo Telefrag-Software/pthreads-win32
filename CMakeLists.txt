@@ -1,0 +1,90 @@
+cmake_minimum_required(VERSION 3.19 FATAL_ERROR)
+
+set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+list(INSERT CMAKE_MODULE_PATH 0 "${CMAKE_CURRENT_SOURCE_DIR}/CMake")
+
+project(pthreads-win32 VERSION 2.11.0 LANGUAGES C)
+
+include(SourceFiles)
+
+if(CMAKE_SIZEOF_VOID_P EQUAL 8)
+	add_definitions(-DPTW32_ARCH="x64")
+else()
+	add_definitions(-DPTW32_ARCH="x86")
+endif()
+
+if(MSVC)
+	add_definitions(-DPTW32_RC_MSC)
+	set(PTHREADS_COMPILER V)
+
+	# If you are using Microsoft VC++ 6.0, the library needs to be built with /EHa instead of /EHs or else cancellation won't work properly.
+	if(MSVC_VERSION EQUAL 1200)
+		set(VCEFLAGS "/EHa /TP ")
+	else()
+		set(VCEFLAGS "/EHs /TP ")
+	endif()
+elseif(CMAKE_COMPILER_IS_GNUCXX)
+	set(PTHREADS_COMPILER G)
+else()
+	message("WARNING: pthreads-win32 doesn't recognize your compiler!")
+endif()
+
+set(PTHREADS_EXCEPTION_SCHEME C)
+set(PTHREADS_COMPATIBILITY_VERSION 2)
+set(PTHREADS_LIBRARY "pthreads${PTHREADS_COMPILER}${PTHREADS_EXCEPTION_SCHEME}${PTHREADS_COMPATIBILITY_VERSION}")
+
+add_definitions(-DHAVE_CONFIG_H -D__PTW32_STATIC_LIB)
+
+add_library(${PROJECT_NAME}
+	STATIC
+		${PTHREADS_WIN32_PUBLIC_HEADER_FILES}
+		${PTHREADS_WIN32_PRIVATE_HEADER_FILES}
+		${PTHREADS_WIN32_SOURCE_FILES}
+		${PTHREADS_WIN32_STATIC_SOURCE_FILES}
+)
+
+include(GNUInstallDirs)
+
+set(CONFIG_INSTALL_DIR "${CMAKE_INSTALL_LIBDIR}/cmake/${PROJECT_NAME}")
+set(GENERATED_DIR "${CMAKE_CURRENT_BINARY_DIR}/generated")
+set(VERSION_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}ConfigVersion.cmake")
+set(PROJECT_CONFIG "${GENERATED_DIR}/${PROJECT_NAME}Config.cmake")
+set(TARGETS_EXPORT_NAME "${PROJECT_NAME}Targets")
+set(NAMESPACE "${PROJECT_NAME}::")
+
+include(CMakePackageConfigHelpers)
+
+write_basic_package_version_file(
+	"${VERSION_CONFIG}" COMPATIBILITY SameMajorVersion
+)
+
+configure_package_config_file(
+	"cmake/Config.cmake.in"
+	"${PROJECT_CONFIG}"
+	INSTALL_DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+	TARGETS ${PROJECT_NAME}
+	EXPORT "${TARGETS_EXPORT_NAME}"
+	LIBRARY DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+	ARCHIVE DESTINATION "${CMAKE_INSTALL_LIBDIR}"
+	RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}"
+	INCLUDES DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+install(
+	FILES ${PTHREADS_WIN32_PUBLIC_HEADER_FILES}
+	DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}"
+)
+
+install(
+	FILES "${PROJECT_CONFIG}" "${VERSION_CONFIG}"
+	DESTINATION "${CONFIG_INSTALL_DIR}"
+)
+
+install(
+	EXPORT "${TARGETS_EXPORT_NAME}"
+	NAMESPACE "${NAMESPACE}"
+	DESTINATION "${CONFIG_INSTALL_DIR}"
+)

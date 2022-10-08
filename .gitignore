@@ -16,3 +16,14 @@ tests/semaphore.h
 tests/benchlib.o
 tests/SIZES.*
 tests/*.log
+
+Build/*
+.vs
+*.ncb
+*.sdf
+*.suo
+*.vcproj.*
+*.vcxproj.user
+*.opensdf
+*.EXE
+*.orig
